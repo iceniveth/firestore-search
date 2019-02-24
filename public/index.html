@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Population</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/5.8.4/firebase-app.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/5.8.4/firebase-firestore.js"></script>
+    <!-- initialize the SDK after all desired features are loaded -->
+    <script defer src="/__/firebase/init.js"></script>
+  </head>
+  <body>
+    <br />
+    <div class="container">
+      <input class="input" type="text" name="" id="textBoxSearch" placeholder="Search" />
+      <br /><br />
+      <table class="table is-fullwidth">
+        <thead>
+          <tr>
+            <th>Last Name</th>
+            <th>First Name</th>
+            <th>Middle name</th>
+            <th>Suffix</th>
+          </tr>
+        </thead>
+        <tbody id="rowsPeople"></tbody>
+      </table>
+    </div>
+      
+    <script>
+      document.addEventListener('DOMContentLoaded', async function() {
+        const db = firebase.firestore();
+
+        const searchByName = async ({
+          search = '',
+          limit = 50,
+          lastNameOfLastPerson = ''
+        } = {}) => {
+          const snapshot = await db.collection('people')
+            .where('keywords', 'array-contains', search.toLowerCase())
+            .orderBy('name.last')
+            .startAfter(lastNameOfLastPerson)
+            .limit(limit)
+            .get();
+          return snapshot.docs.reduce((acc, doc) => {
+            const name = doc.data().name;
+            return acc.concat(`
+              <tr>
+                <td>${name.last}</td>
+                <td>${name.first}</td>
+                <td>${name.middle}</td>
+                <td>${name.suffix}</td>
+              </tr>`);
+          }, '');
+        };
+
+        const textBoxSearch = document.querySelector('#textBoxSearch');
+
+        const rowsPeople = document.querySelector('#rowsPeople');
+        rowsPeople.innerHTML = await searchByName();
+
+        textBoxSearch.addEventListener('keyup', async (e) => rowsPeople.innerHTML = await searchByName({search: e.target.value}));
+
+        async function lazyLoad() {
+          const scrollIsAtTheBottom = (document.documentElement.scrollHeight - window.innerHeight) === window.scrollY; 
+          if (scrollIsAtTheBottom) {
+            const rows = Array.from(document.querySelectorAll('#rowsPeople tr'));
+            const lastNameOfLastPerson = rows.slice(-1)[0].firstElementChild.textContent;
+
+            rowsPeople.innerHTML += await searchByName({
+              search: textBoxSearch.value,
+              lastNameOfLastPerson: lastNameOfLastPerson
+            });
+          }
+        }
+        window.addEventListener('scroll', lazyLoad);
+      });
+    </script>
+  </body>
+</html>
