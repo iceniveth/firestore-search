@@ -45,35 +45,50 @@
             .startAfter(lastNameOfLastPerson)
             .limit(limit)
             .get();
-          return snapshot.docs.reduce((acc, doc) => {
+
+          const convertDocumentToTableRows = (acc, doc) => {
             const name = doc.data().name;
-            return acc.concat(`
-              <tr>
-                <td>${name.last}</td>
-                <td>${name.first}</td>
-                <td>${name.middle}</td>
-                <td>${name.suffix}</td>
-              </tr>`);
-          }, '');
+            const tr = document.createElement('tr');
+
+            const names = [ name.last, name.first, name.middle, name.suffix ];            
+            names.map(n => {
+              const td = document.createElement('td');
+              td.textContent = n;
+              tr.appendChild(td);
+            });
+
+            return acc.concat(tr);
+          };
+          const wrapTableRowsInFragment = (acc, tr) => {
+              acc.appendChild(tr);
+              return acc;
+            }
+          return snapshot
+            .docs
+            .reduce(convertDocumentToTableRows, [])
+            .reduce(wrapTableRowsInFragment, document.createDocumentFragment());
         };
 
         const textBoxSearch = document.querySelector('#textBoxSearch');
-
         const rowsPeople = document.querySelector('#rowsPeople');
-        rowsPeople.innerHTML = await searchByName();
+        const updatePeopleRows = fragment => {
+          while (rowsPeople.hasChildNodes()) rowsPeople.removeChild(rowsPeople.firstChild); // Remove all children
+          rowsPeople.appendChild(fragment);
+        }
 
-        textBoxSearch.addEventListener('keyup', async (e) => rowsPeople.innerHTML = await searchByName({search: e.target.value}));
+        updatePeopleRows(await searchByName());
+
+        textBoxSearch.addEventListener('keyup', async (e) => updatePeopleRows(await searchByName({search: e.target.value})));
 
         async function lazyLoad() {
           const scrollIsAtTheBottom = (document.documentElement.scrollHeight - window.innerHeight) === window.scrollY; 
           if (scrollIsAtTheBottom) {
-            const rows = Array.from(document.querySelectorAll('#rowsPeople tr'));
-            const lastNameOfLastPerson = rows.slice(-1)[0].firstElementChild.textContent;
+            const lastNameOfLastPerson = rowsPeople.lastChild.firstElementChild.textContent;
 
-            rowsPeople.innerHTML += await searchByName({
+            rowsPeople.appendChild(await searchByName({
               search: textBoxSearch.value,
               lastNameOfLastPerson: lastNameOfLastPerson
-            });
+            }));
           }
         }
         window.addEventListener('scroll', lazyLoad);
