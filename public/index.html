@@ -67,8 +67,7 @@
         async function lazyLoad() {
           const scrollIsAtTheBottom = (document.documentElement.scrollHeight - window.innerHeight) === window.scrollY; 
           if (scrollIsAtTheBottom) {
-            const rows = Array.from(document.querySelectorAll('#rowsPeople tr'));
-            const lastNameOfLastPerson = rows.slice(-1)[0].firstElementChild.textContent;
+            const lastNameOfLastPerson = rowsPeople.lastChild.firstElementChild.textContent;
 
             rowsPeople.innerHTML += await searchByName({
               search: textBoxSearch.value,
